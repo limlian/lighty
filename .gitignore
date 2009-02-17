@@ -3,3 +3,5 @@
 .project
 build.properties
 war/WEB-INF/classes
+war/WEB-INF/lib
+lighty.war
