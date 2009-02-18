@@ -2,6 +2,6 @@
 .classpath
 .project
 build.properties
-war/WEB-INF/classes
+war/WEB-INF/classes/lighty
 war/WEB-INF/lib
 lighty.war
