@@ -5,6 +5,7 @@
 	
 	<property name="src.dir" value="src" />
 	<property name="web.dir" value="war" />
+	<property name="test.dir" value="test" />
 	<property name="build.dir" value="${web.dir}/WEB-INF/classes" />
 	<property name="name" value="lighty" />	
 	
@@ -18,6 +19,15 @@
 		<pathelement path="${build.dir}" />
 	</path>
 	
+	<path id="test-classpath">
+		<fileset dir="${web.dir}/WEB-INF/lib">
+			<include name="*.jar"/>
+		</fileset>
+		<pathelement path="${build.dir}"/>
+		<pathelement path="${test.dir}"/>
+		<pathelement path="${web.dir}/WEB-INF/classes"/>
+	</path>	
+	
 	<target name="usage">
 		<echo message=""/>
 		<echo message="${name} build file" />
@@ -26,6 +36,7 @@
 		<echo message="Available targets are: "/>
 		<echo message="" />
 		<echo message="build  --> Build the application" />
+		<echo message="test --> test the application" />
 		<echo message="deploy --> Deploy application as directory"/>
 		<echo message="deploywar --> Deploy application as a WAR file"/>
 		<echo message="install --> Install application in Tomcat"/>
@@ -65,6 +76,162 @@
 				<include name="*.war" />
 			</fileset>
 		</copy>
+	</target>
+	
+	<target name="buildtests" description="Compile test tree java files">
+		<mkdir dir="${build.dir}" />
+		<javac destdir="${build.dir}" source="1.5" target="1.5" debug="true"
+			deprecation="false" optimize="false" failonerror="true">
+			<src path="${test.dir}" />
+			<classpath refid="master-classpath" />
+		</javac>
+	</target>
+	
+	<target name="tests" depends="build, buildtests" description="Run test">
+		<junit printsummary="on"
+			fork="false"
+			haltonfailure="false"
+			failureproperty="tests.failed"
+			showoutput="true">
+			<classpath refid="test-classpath" />
+			<formatter type="brief" usefile="false" />
+			
+			<batchtest>
+				<fileset dir="${build.dir}">
+					<include name="**/*Tests.*" />
+					<exclude name="**/Jdbc*Tests.*"/>
+				</fileset>
+			</batchtest>
+		</junit>
+		
+		<fail if="tests.failed">
+			test.failed=${tests.failed}
+			***********************************************************
+            ***********************************************************
+            ****  One or more tests failed!  Check the output ...  ****
+            ***********************************************************
+            ***********************************************************
+		</fail>	
+	</target>
+	
+	<target name="dbTests" depends="build, buildtests, dropTables, createTables, loadData"
+		description="Run db tests">
+		<junit printsummary="on"
+			fork="false"
+			haltonfailure="false"
+			failureproperty="test.failed"
+			showoutput="true">
+			<classpath refid="test-classpath"/>
+			<formatter type="brief" usefile="false" />
+			
+			<batchtest>
+				<fileset dir="${build.dir}">
+					<include name="**/JDBC*Tests.*"/>
+				</fileset>
+			</batchtest>
+		</junit>
+		
+		<fail if="tests.failed">
+            tests.failed=${tests.failed}
+            ***********************************************************
+            ***********************************************************
+            ****  One or more tests failed!  Check the output ...  ****
+            ***********************************************************
+            ***********************************************************				
+		</fail>
+	</target>
+	
+	<target name="clean" description="Clean output directories">
+		<delete>
+			<fileset dir="${build.dir}">
+				<include name="**/*.class"/>
+			</fileset>
+		</delete>
+	</target>	
+	
+	<target name="undeploy" description="Un-Deploy application">
+		<delete>
+			<fileset dir="${deploy.path}/${name}">
+				<include name="**/*.*"/>
+			</fileset>
+		</delete>
+	</target>	
+	
+	<target name="createTables">
+		<echo message="CREATE TABLES USING: ${db.driver} ${db.url}"/>
+		<sql driver="${db.driver}"
+			url="${db.url}"
+			userid="${db.user}"
+			password="${db.pw}"
+			onerror="continue"
+			src="db/create_products.sql">
+			<classpath refid="master-classpath" />
+		</sql>
+	</target>
+	
+	<target name="dropTables">
+		<echo message="DROP TABLES USING: ${db.driver} ${db.url}"/>
+		<sql driver="${db.driver}"
+			url="${db.url}"
+			userid="${db.user}"
+			password="${db.pw}"
+			onerror="continue">
+			<classpath refid="master-classpath"/>
+			
+			DROP TABLE products;
+		</sql>	
+	</target>
+	
+	<target name="loadData">
+		<echo message="LOAD DATA USING: ${db.driver} ${db.url}"/>
+		<sql driver="${db.driver}"
+			url="${db.url}"
+			userid="${db.user}"
+			password="${db.pw}"
+			onerror="continue"
+			src="db/load_data.sql">
+			<classpath refid="master-classpath"/>
+		</sql>
+	</target>
+	
+	<target name="printData">
+		<echo message="PRINT DATA USING: ${db.driver} ${db.url}"/>
+		<sql driver="${db.driver}"
+			url="${db.url}"
+			userid="${db.user}"
+			password="${db.pw}"
+			onerror="continue"
+			print="true">
+			<classpath refid="master-classpath"/>
+			
+			SELECT * FROM products;
+		</sql>
+	</target>
+	
+	<target name="clearData">
+		<echo message="CLEAR DATA USING: ${db.driver} ${db.url}" />
+		<sql driver="${db.driver}"
+			url="${db.url}"
+			userid="${db.user}"
+			password="${db.pw}"
+			onerror="continue">
+			<classpath refid="master-classpath"/>
+			
+			DELETE FROM products;
+		</sql>
+	</target>
+	
+	<target name="shutdownDb">
+		<echo message="SHUT DOWN DATABASE USING: ${db.driver} ${db.url}"/>
+		<sql driver="${db.driver}"
+			url="${db.url}"
+			userid="${db.user}"
+			password="${db.pw}"
+			onerror="continue">
+			<classpath refid="master-classpath"/>
+		
+			SHUTDOWN;
+		</sql>
 	</target>
 	
 	<path id="catalina-ant-classpath">
