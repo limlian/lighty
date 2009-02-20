@@ -7,3 +7,6 @@ war/WEB-INF/classes/lighty
 war/WEB-INF/lib
 lighty.war
 bin
+db/test.lck
+db/test.log
+db/test.properties
